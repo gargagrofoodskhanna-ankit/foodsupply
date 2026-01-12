@@ -1,0 +1,846 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Company Test Results Comparison Tool</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+        }
+
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 2.5rem;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 40px;
+            font-size: 1.1rem;
+        }
+
+        .instructions {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+        }
+
+        .instructions h3 {
+            color: #1976d2;
+            margin-bottom: 15px;
+        }
+
+        .instructions ul {
+            margin-left: 20px;
+            color: #555;
+        }
+
+        .instructions li {
+            margin-bottom: 8px;
+        }
+
+        .upload-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .upload-box {
+            border: 3px dashed #667eea;
+            border-radius: 15px;
+            padding: 40px;
+            text-align: center;
+            background: #f8f9ff;
+            transition: all 0.3s ease;
+        }
+
+        .upload-box.dragover {
+            border-color: #764ba2;
+            background: #e8eaff;
+            transform: scale(1.02);
+        }
+
+        .upload-box h3 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            display: inline-block;
+            margin-bottom: 15px;
+        }
+
+        .file-input-wrapper input[type="file"] {
+            position: absolute;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+
+        .file-input-label {
+            display: inline-block;
+            padding: 15px 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 50px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .file-input-label:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .file-name {
+            margin-top: 15px;
+            color: #666;
+            font-size: 0.9rem;
+            min-height: 20px;
+        }
+
+        .file-name.has-file {
+            color: #28a745;
+            font-weight: 600;
+        }
+
+        .column-mapping {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            display: none;
+        }
+
+        .column-mapping.show {
+            display: block;
+        }
+
+        .column-mapping h3 {
+            color: #856404;
+            margin-bottom: 15px;
+        }
+
+        .mapping-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+
+        .mapping-box h4 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.1rem;
+        }
+
+        .mapping-row {
+            display: grid;
+            grid-template-columns: 150px 1fr;
+            gap: 15px;
+            margin-bottom: 15px;
+            align-items: center;
+        }
+
+        .mapping-row label {
+            font-weight: 600;
+            color: #333;
+            font-size: 0.9rem;
+        }
+
+        .mapping-row select {
+            padding: 8px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 0.9rem;
+        }
+
+        .compare-button {
+            display: block;
+            width: 100%;
+            max-width: 300px;
+            margin: 30px auto;
+            padding: 18px 40px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            font-size: 1.2rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .compare-button:hover:not(:disabled) {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        .compare-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .results-section {
+            margin-top: 40px;
+            display: none;
+        }
+
+        .results-section.show {
+            display: block;
+        }
+
+        .summary {
+            background: #f8f9ff;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 30px;
+        }
+
+        .summary h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 1.8rem;
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+
+        .summary-item {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .summary-item .label {
+            color: #666;
+            font-size: 0.9rem;
+            margin-bottom: 8px;
+        }
+
+        .summary-item .value {
+            color: #333;
+            font-size: 2rem;
+            font-weight: 700;
+        }
+
+        .results-table-container {
+            overflow-x: auto;
+            margin-top: 30px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        tr:hover {
+            background: #f8f9ff;
+        }
+
+        .passed {
+            background: #d4edda;
+            color: #155724;
+            font-weight: 600;
+        }
+
+        .rejected {
+            background: #f8d7da;
+            color: #721c24;
+            font-weight: 600;
+        }
+
+        .total-tests {
+            background: #d1ecf1;
+            color: #0c5460;
+            font-weight: 600;
+        }
+
+        .cell-different {
+            background: #fff3cd;
+            font-weight: 600;
+        }
+
+        .cell-same {
+            background: #d4edda;
+        }
+
+        .cell-missing {
+            background: #ffe0e0;
+            color: #856404;
+        }
+
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border-left: 4px solid #dc3545;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #667eea;
+            font-size: 1.2rem;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 768px) {
+            .upload-section, .mapping-container {
+                grid-template-columns: 1fr;
+            }
+
+            .container {
+                padding: 20px;
+            }
+
+            h1 {
+                font-size: 2rem;
+            }
+
+            .mapping-row {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📊 Company Test Results Comparison Tool</h1>
+        <p class="subtitle">Compare two Excel files with company test results</p>
+
+        <div class="instructions">
+            <h3>📋 Instructions</h3>
+            <ul>
+                <li>Upload two Excel files containing company test results</li>
+                <li>Each file should have columns for: License Number, QMS Passed, QMS Rejected</li>
+                <li>The application will automatically detect columns or let you map them manually</li>
+                <li>Compare results between the two files by company license number</li>
+            </ul>
+        </div>
+
+        <div class="upload-section">
+            <div class="upload-box" id="uploadBox1">
+                <h3>📄 New Report</h3>
+                <div class="file-input-wrapper">
+                    <input type="file" id="file1" accept=".xlsx,.xls" />
+                    <label for="file1" class="file-input-label">Choose New Report</label>
+                </div>
+                <div class="file-name" id="fileName1">No file selected</div>
+            </div>
+
+            <div class="upload-box" id="uploadBox2">
+                <h3>📄 Old Report</h3>
+                <div class="file-input-wrapper">
+                    <input type="file" id="file2" accept=".xlsx,.xls" />
+                    <label for="file2" class="file-input-label">Choose Old Report</label>
+                </div>
+                <div class="file-name" id="fileName2">No file selected</div>
+            </div>
+        </div>
+
+        <div class="column-mapping" id="columnMapping">
+            <h3>🔗 Map Your Columns</h3>
+            <div class="mapping-container">
+                <div class="mapping-box">
+                    <h4>New Report Column Mapping</h4>
+                    <div class="mapping-row">
+                        <label>License Number:</label>
+                        <select id="licenseColumn1"></select>
+                    </div>
+                    <div class="mapping-row">
+                        <label>Company Name:</label>
+                        <select id="nameColumn1"></select>
+                    </div>
+                    <div class="mapping-row">
+                        <label>QMS Passed:</label>
+                        <select id="passedColumn1"></select>
+                    </div>
+                    <div class="mapping-row">
+                        <label>QMS Rejected:</label>
+                        <select id="rejectedColumn1"></select>
+                    </div>
+                </div>
+                <div class="mapping-box">
+                    <h4>Old Report Column Mapping</h4>
+                    <div class="mapping-row">
+                        <label>License Number:</label>
+                        <select id="licenseColumn2"></select>
+                    </div>
+                    <div class="mapping-row">
+                        <label>Company Name:</label>
+                        <select id="nameColumn2"></select>
+                    </div>
+                    <div class="mapping-row">
+                        <label>QMS Passed:</label>
+                        <select id="passedColumn2"></select>
+                    </div>
+                    <div class="mapping-row">
+                        <label>QMS Rejected:</label>
+                        <select id="rejectedColumn2"></select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <button class="compare-button" id="compareBtn" disabled>Compare Files</button>
+
+        <div id="errorMessage" class="error-message" style="display: none;"></div>
+
+        <div class="results-section" id="resultsSection">
+            <div class="summary" id="summary"></div>
+            <div class="results-table-container" id="tableContainer"></div>
+        </div>
+    </div>
+
+    <script>
+        let file1Data = null;
+        let file2Data = null;
+        let file1Headers = [];
+        let file2Headers = [];
+        let mappedColumns1 = { license: null, name: null, passed: null, rejected: null };
+        let mappedColumns2 = { license: null, name: null, passed: null, rejected: null };
+
+        // File input handlers
+        document.getElementById('file1').addEventListener('change', function(e) {
+            handleFileSelect(e.target.files[0], 1);
+        });
+
+        document.getElementById('file2').addEventListener('change', function(e) {
+            handleFileSelect(e.target.files[0], 2);
+        });
+
+        // Drag and drop handlers
+        const uploadBox1 = document.getElementById('uploadBox1');
+        const uploadBox2 = document.getElementById('uploadBox2');
+
+        [uploadBox1, uploadBox2].forEach((box, index) => {
+            box.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                box.classList.add('dragover');
+            });
+
+            box.addEventListener('dragleave', () => {
+                box.classList.remove('dragover');
+            });
+
+            box.addEventListener('drop', (e) => {
+                e.preventDefault();
+                box.classList.remove('dragover');
+                const file = e.dataTransfer.files[0];
+                if (file && (file.name.endsWith('.xlsx') || file.name.endsWith('.xls'))) {
+                    handleFileSelect(file, index + 1);
+                } else {
+                    showError('Please select a valid Excel file (.xlsx or .xls)');
+                }
+            });
+        });
+
+        function handleFileSelect(file, fileNumber) {
+            if (!file) return;
+
+            const fileName = file.name;
+            const fileNameElement = document.getElementById(`fileName${fileNumber}`);
+            
+            fileNameElement.textContent = fileName;
+            fileNameElement.classList.add('has-file');
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
+                    const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
+
+                    if (fileNumber === 1) {
+                        file1Data = jsonData;
+                        if (jsonData.length > 0) {
+                            file1Headers = jsonData[0].map(h => String(h).trim());
+                            setupColumnMapping(1, file1Headers);
+                        }
+                    } else {
+                        file2Data = jsonData;
+                        if (jsonData.length > 0) {
+                            file2Headers = jsonData[0].map(h => String(h).trim());
+                            setupColumnMapping(2, file2Headers);
+                        }
+                    }
+
+                    updateCompareButton();
+                    hideError();
+                } catch (error) {
+                    showError(`Error reading file ${fileName}: ${error.message}`);
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function setupColumnMapping(fileNumber, headers) {
+            const suffix = fileNumber === 1 ? '1' : '2';
+            const licenseSelect = document.getElementById(`licenseColumn${suffix}`);
+            const nameSelect = document.getElementById(`nameColumn${suffix}`);
+            const passedSelect = document.getElementById(`passedColumn${suffix}`);
+            const rejectedSelect = document.getElementById(`rejectedColumn${suffix}`);
+            const mappedColumns = fileNumber === 1 ? mappedColumns1 : mappedColumns2;
+
+            // Clear existing options
+            licenseSelect.innerHTML = '<option value="">Select column...</option>';
+            nameSelect.innerHTML = '<option value="">Select column...</option>';
+            passedSelect.innerHTML = '<option value="">Select column...</option>';
+            rejectedSelect.innerHTML = '<option value="">Select column...</option>';
+
+            // Add header options
+            headers.forEach((header, index) => {
+                if (header) {
+                    const option = `<option value="${index}">${header}</option>`;
+                    licenseSelect.innerHTML += option;
+                    nameSelect.innerHTML += option;
+                    passedSelect.innerHTML += option;
+                    rejectedSelect.innerHTML += option;
+                }
+            });
+
+            // Auto-detect columns
+            headers.forEach((header, index) => {
+                const headerLower = header.toLowerCase();
+                
+                if (!mappedColumns.license) {
+                    if (headerLower.includes('license') || headerLower.includes('licence') || 
+                        (headerLower.includes('company') && headerLower.includes('number')) ||
+                        (headerLower.includes('company') && headerLower.includes('id'))) {
+                        licenseSelect.value = index;
+                        mappedColumns.license = index;
+                    }
+                }
+                
+                if (!mappedColumns.name) {
+                    if (headerLower.includes('name') || headerLower.includes('company name') ||
+                        (headerLower.includes('company') && !headerLower.includes('number') && !headerLower.includes('id'))) {
+                        nameSelect.value = index;
+                        mappedColumns.name = index;
+                    }
+                }
+                
+                if (!mappedColumns.passed) {
+                    if ((headerLower.includes('qms') && headerLower.includes('pass')) ||
+                        headerLower.includes('passed')) {
+                        passedSelect.value = index;
+                        mappedColumns.passed = index;
+                    }
+                }
+                
+                if (!mappedColumns.rejected) {
+                    if ((headerLower.includes('qms') && headerLower.includes('reject')) ||
+                        headerLower.includes('rejected')) {
+                        rejectedSelect.value = index;
+                        mappedColumns.rejected = index;
+                    }
+                }
+            });
+
+            // Show column mapping section
+            document.getElementById('columnMapping').classList.add('show');
+
+            // Add change handlers
+            licenseSelect.addEventListener('change', (e) => {
+                mappedColumns.license = e.target.value ? parseInt(e.target.value) : null;
+                updateCompareButton();
+            });
+
+            nameSelect.addEventListener('change', (e) => {
+                mappedColumns.name = e.target.value ? parseInt(e.target.value) : null;
+                updateCompareButton();
+            });
+
+            passedSelect.addEventListener('change', (e) => {
+                mappedColumns.passed = e.target.value ? parseInt(e.target.value) : null;
+                updateCompareButton();
+            });
+
+            rejectedSelect.addEventListener('change', (e) => {
+                mappedColumns.rejected = e.target.value ? parseInt(e.target.value) : null;
+                updateCompareButton();
+            });
+        }
+
+        function updateCompareButton() {
+            const compareBtn = document.getElementById('compareBtn');
+            const file1Ready = file1Data && mappedColumns1.license && 
+                              (mappedColumns1.passed !== null || mappedColumns1.rejected !== null);
+            const file2Ready = file2Data && mappedColumns2.license && 
+                              (mappedColumns2.passed !== null || mappedColumns2.rejected !== null);
+            compareBtn.disabled = !(file1Ready && file2Ready);
+            // Note: name column is optional, so we don't require it
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('errorMessage');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+        }
+
+        function hideError() {
+            document.getElementById('errorMessage').style.display = 'none';
+        }
+
+        // Compare button handler
+        document.getElementById('compareBtn').addEventListener('click', function() {
+            if (!file1Data || !file2Data) {
+                showError('Please select both files to compare');
+                return;
+            }
+
+            compareFiles();
+        });
+
+        function compareFiles() {
+            const resultsSection = document.getElementById('resultsSection');
+            resultsSection.innerHTML = '<div class="loading"><div class="spinner"></div>Comparing files...</div>';
+            resultsSection.classList.add('show');
+
+            try {
+                // Process both files
+                const file1Results = processFile(file1Data, mappedColumns1);
+                const file2Results = processFile(file2Data, mappedColumns2);
+
+                // Compare results
+                const comparison = performComparison(file1Results, file2Results);
+
+                // Display results
+                displayResults(comparison);
+
+            } catch (error) {
+                showError(`Error comparing files: ${error.message}`);
+                resultsSection.classList.remove('show');
+            }
+        }
+
+        function processFile(data, mappedColumns) {
+            const results = {};
+            
+            for (let i = 1; i < data.length; i++) {
+                const row = data[i];
+                const license = row[mappedColumns.license] ? String(row[mappedColumns.license]).trim() : '';
+                if (!license) continue;
+
+                const name = mappedColumns.name !== null && row[mappedColumns.name] 
+                    ? String(row[mappedColumns.name]).trim() 
+                    : '';
+
+                if (!results[license]) {
+                    results[license] = {
+                        license: license,
+                        name: name,
+                        passed: 0,
+                        rejected: 0,
+                        total: 0
+                    };
+                } else {
+                    // Update name if not set yet
+                    if (!results[license].name && name) {
+                        results[license].name = name;
+                    }
+                }
+
+                if (mappedColumns.passed !== null) {
+                    const passedValue = row[mappedColumns.passed];
+                    if (passedValue !== '' && passedValue !== null && passedValue !== undefined) {
+                        results[license].passed += parseFloat(passedValue) || 0;
+                    }
+                }
+
+                if (mappedColumns.rejected !== null) {
+                    const rejectedValue = row[mappedColumns.rejected];
+                    if (rejectedValue !== '' && rejectedValue !== null && rejectedValue !== undefined) {
+                        results[license].rejected += parseFloat(rejectedValue) || 0;
+                    }
+                }
+
+                results[license].total = results[license].passed + results[license].rejected;
+            }
+
+            return results;
+        }
+
+        function performComparison(file1Results, file2Results) {
+            const allLicenses = new Set([...Object.keys(file1Results), ...Object.keys(file2Results)]);
+            const comparison = [];
+
+            allLicenses.forEach(license => {
+                const newReport = file1Results[license] || { license, name: '', passed: 0, rejected: 0, total: 0 };
+                const oldReport = file2Results[license] || { license, name: '', passed: 0, rejected: 0, total: 0 };
+
+                // Use name from either file (prefer new report, then old report)
+                const name = newReport.name || oldReport.name || '';
+
+                comparison.push({
+                    license: license,
+                    name: name,
+                    file1: newReport,  // New Report
+                    file2: oldReport,  // Old Report
+                    passedDiff: oldReport.passed - newReport.passed,
+                    rejectedDiff: oldReport.rejected - newReport.rejected,
+                    totalDiff: oldReport.total - newReport.total,
+                    onlyInFile1: !file2Results[license],  // Only in New Report
+                    onlyInFile2: !file1Results[license]   // Only in Old Report
+                });
+            });
+
+            return comparison.sort((a, b) => a.license.localeCompare(b.license));
+        }
+
+        function displayResults(comparison) {
+            const resultsSection = document.getElementById('resultsSection');
+            
+            const totalCompanies = comparison.length;
+            const onlyInFile1 = comparison.filter(c => c.onlyInFile1).length;
+            const onlyInFile2 = comparison.filter(c => c.onlyInFile2).length;
+            const inBoth = comparison.filter(c => !c.onlyInFile1 && !c.onlyInFile2).length;
+            const hasDifferences = comparison.filter(c => c.passedDiff !== 0 || c.rejectedDiff !== 0).length;
+
+            // Summary
+            const summaryHTML = `
+                <h2>📊 Comparison Summary</h2>
+                <div class="summary-grid">
+                    <div class="summary-item">
+                        <div class="label">Total Companies</div>
+                        <div class="value">${totalCompanies}</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="label">In Both Reports</div>
+                        <div class="value" style="color: #28a745;">${inBoth}</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="label">Only in New Report</div>
+                        <div class="value" style="color: #ffc107;">${onlyInFile1}</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="label">Only in Old Report</div>
+                        <div class="value" style="color: #17a2b8;">${onlyInFile2}</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="label">With Differences</div>
+                        <div class="value" style="color: #dc3545;">${hasDifferences}</div>
+                    </div>
+                </div>
+            `;
+
+            // Table
+            let tableHTML = '<h2 style="margin-top: 30px; margin-bottom: 20px;">📋 Detailed Comparison by Company</h2>';
+            tableHTML += '<table><thead><tr>';
+            tableHTML += '<th>License Number</th>';
+            tableHTML += '<th>Company Name</th>';
+            tableHTML += '<th>New Report - Passed</th>';
+            tableHTML += '<th>New Report - Rejected</th>';
+            tableHTML += '<th>New Report - Total</th>';
+            tableHTML += '<th>Old Report - Passed</th>';
+            tableHTML += '<th>Old Report - Rejected</th>';
+            tableHTML += '<th>Old Report - Total</th>';
+            tableHTML += '<th>Difference (Passed)</th>';
+            tableHTML += '<th>Difference (Rejected)</th>';
+            tableHTML += '</tr></thead><tbody>';
+
+            comparison.forEach(item => {
+                const passedClass = item.passedDiff !== 0 ? 'cell-different' : 'cell-same';
+                const rejectedClass = item.rejectedDiff !== 0 ? 'cell-different' : 'cell-same';
+                const file1Class = item.onlyInFile1 ? 'cell-missing' : '';
+                const file2Class = item.onlyInFile2 ? 'cell-missing' : '';
+
+                tableHTML += '<tr>';
+                tableHTML += `<td><strong>${item.license}</strong>`;
+                if (item.onlyInFile1) tableHTML += ' <small>(Only in New Report)</small>';
+                if (item.onlyInFile2) tableHTML += ' <small>(Only in Old Report)</small>';
+                tableHTML += '</td>';
+                tableHTML += `<td>${item.name || '-'}</td>`;
+                tableHTML += `<td class="${file1Class}">${item.file1.passed}</td>`;
+                tableHTML += `<td class="${file1Class}">${item.file1.rejected}</td>`;
+                tableHTML += `<td class="${file1Class} total-tests">${item.file1.total}</td>`;
+                tableHTML += `<td class="${file2Class}">${item.file2.passed}</td>`;
+                tableHTML += `<td class="${file2Class}">${item.file2.rejected}</td>`;
+                tableHTML += `<td class="${file2Class} total-tests">${item.file2.total}</td>`;
+                tableHTML += `<td class="${passedClass}">${item.passedDiff > 0 ? '+' : ''}${item.passedDiff}</td>`;
+                tableHTML += `<td class="${rejectedClass}">${item.rejectedDiff > 0 ? '+' : ''}${item.rejectedDiff}</td>`;
+                tableHTML += '</tr>';
+            });
+
+            tableHTML += '</tbody></table>';
+
+            resultsSection.innerHTML = `
+                <div class="summary">${summaryHTML}</div>
+                <div class="results-table-container">${tableHTML}</div>
+            `;
+        }
+    </script>
+</body>
+</html>
